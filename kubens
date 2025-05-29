@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Script: kubens
+# Description: Switches the active kubectl namespace.
+# Usage: kubens <namespace> (switches to the specified namespace)
+#        kubens             (switches to the default namespace)
+
+NAMESPACE="$1"
+
+if [ -z "$NAMESPACE" ]; then
+  kubectl config set-context --current --namespace=default
+  echo "Switched to namespace: default"
+else
+  kubectl config set-context --current --namespace="$NAMESPACE"
+  echo "Switched to namespace: $NAMESPACE"
+fi
