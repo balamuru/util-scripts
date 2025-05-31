@@ -1,0 +1,73 @@
+#!/bin/bash
+
+
+# Script: kubectxt
+# Description: Switches the active Kubernetes context using a menu-driven interface.
+# Usage: kubectxt   (displays available contexts and prompts for selection)
+#        Exits after switching to the selected context or on invalid input.
+
+# Function to display contexts and return them as an array
+get_contexts() {
+    local contexts=()
+    # Read kubectl config get-contexts output, skip header, and store context names
+    while IFS= read -r line; do
+        # Extract context name (second column, accounting for CURRENT asterisk)
+        context=$(echo "$line" | awk '{print $2}' | grep -v '^NAME$')
+        if [ -n "$context" ]; then
+            contexts+=("$context")
+        fi
+    done < <(kubectl config get-contexts)
+    echo "${contexts[@]}"
+}
+
+# Function to display menu
+display_menu() {
+    local contexts=("$@")
+    echo "Available Kubernetes contexts:"
+    echo "-----------------------------"
+    for i in "${!contexts[@]}"; do
+        printf "%s) %s\n" "$((i+1))" "${contexts[i]}"
+    done
+    echo "q) Quit"
+}
+
+# Main script
+echo "Fetching Kubernetes contexts..."
+IFS=' ' read -r -a context_array <<< "$(get_contexts)"
+
+if [ ${#context_array[@]} -eq 0 ]; then
+    echo "No contexts found!"
+    exit 1
+fi
+
+# Display current context
+current_context=$(kubectl config current-context)
+echo -e "\nCurrent context: $current_context\n"
+
+# Display menu
+display_menu "${context_array[@]}"
+
+# Get user input
+read -p "Select a context (1-${#context_array[@]}) or q to quit: " choice
+
+# Handle quit
+if [ "$choice" = "q" ] || [ "$choice" = "Q" ]; then
+    echo "Exiting..."
+    exit 0
+fi
+
+# Validate input is a number and within range
+if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#context_array[@]}" ]; then
+    selected_context=${context_array[$((choice-1))]}
+    echo "Switching to context: $selected_context"
+    kubectl config use-context "$selected_context"
+    if [ $? -eq 0 ]; then
+        echo "Successfully switched to context: $selected_context"
+    else
+        echo "Failed to switch to context: $selected_context"
+        exit 1
+    fi
+else
+    echo "Invalid choice"
+    exit 1
+fi
