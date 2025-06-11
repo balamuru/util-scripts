@@ -2,10 +2,10 @@
 
 #-------------------------------------------------------------------------------
 #
-# k-delete-all-ns
+# kubedelete
 #
 # Description:
-#   This function completely deletes all resources within a specified
+#   This script completely deletes all resources within a specified
 #   Kubernetes namespace. It is a powerful and destructive script.
 #
 #   The script first discovers all deletable, namespaced API resources
@@ -13,14 +13,14 @@
 #   target namespace.
 #
 # Usage:
-#   k-delete-all-ns <namespace>
+#   ./kubedelete <namespace>
 #
 # Arguments:
 #   $1 - The name of the Kubernetes namespace to wipe. This is a required
 #        argument.
 #
 # Example:
-#   k-delete-all-ns my-test-namespace
+#   ./kubedelete my-test-namespace
 #
 # Important:
 #   ⚠️  This is a highly destructive action and is IRREVERSIBLE. ⚠️
@@ -29,19 +29,36 @@
 #   Always double-check the namespace before confirming.
 #
 #-------------------------------------------------------------------------------
-k-delete-all-ns() {
+
+# --- Main Deletion Function ---
+main() {
   # --- Argument Validation ---
   # Check if a namespace argument was provided. If not, print an error
   # and exit the function with a non-zero status code.
   if [ -z "$1" ]; then
     echo "Error: Please provide a namespace."
+    echo "Usage: $0 <namespace>"
     return 1
   fi
 
   # --- Confirmation Prompt ---
   # Prompt the user for explicit confirmation before proceeding.
-  # The `read` command waits for user input.
-  # -p: Displays the prompt string.
-  # -n 1: Reads only one character.
-  # -r: Prevents backslashes from being interpreted.
-  read -p "Are you sure you want
+  read -p "Are you sure you want to delete ALL resources in the '$1' namespace? This is irreversible. [y/N] " -n 1 -r
+  echo # Move to a new line after the user presses a key.
+
+  # --- Execution Logic ---
+  # Check if the user's input (stored in the $REPLY variable) was 'y' or 'Y'.
+  if [[ <span class="math-inline">REPLY \=\~ ^\[Yy\]</span> ]]; then
+    # If confirmed, proceed with deletion.
+    echo "Proceeding with deletion of all resources in namespace: $1"
+    kubectl api-resources --verbs=delete --namespaced -o name | xargs -n 1 kubectl delete --all -n "$1"
+    echo "Deletion of namespace '<span class="math-inline">1' complete\."
+else
+\# If the user enters anything other than 'y' or 'Y', cancel the operation\.
+echo "Operation cancelled\."
+fi
+\}
+\# \-\-\- Script Entrypoint \-\-\-
+\# This is what runs the 'main' function, passing all command\-line arguments \(</span>@) to it.
+# This line is crucial for making the script runnable.
+main "$@"
